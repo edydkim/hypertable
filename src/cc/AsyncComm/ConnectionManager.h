@@ -77,7 +77,7 @@ namespace Hypertable {
       bool                connected;
       /// Set when connection is removed, prevents connect retry attempts
       bool                decomissioned;
-      /// Connection address supplied to #add method
+      /// Connection address supplied to the #add methods
       CommAddress         addr;
       /// Local address to bind to
       CommAddress         local_addr;
@@ -112,7 +112,7 @@ namespace Hypertable {
       }
     };
 
-    /** Connection manager state for sharing between Connection manager objects.
+    /** Connection manager state shared between Connection manager objects.
      */
     class SharedImpl : public ReferenceCount {
     public:
@@ -162,29 +162,26 @@ namespace Hypertable {
       m_impl->thread = new boost::thread(*this);
     }
 
-    /**
-     * Copy Constructor.  Shares the implementation with object being copied.
+    /** Copy Constructor.  Shares the implementation with object being copied.
      */
     ConnectionManager(const ConnectionManager &cm) {
       m_impl = cm.m_impl;
       intrusive_ptr_add_ref(this);
     }
 
-    /**
-     * Destructor.
+    /** Destructor.
      */
     virtual ~ConnectionManager() { }
 
-    /**
-     * Adds a connection to the connection manager.  The <code>addr</code>
-     * parameter holds an address that the connection manager should maintain a
-     * connection to.  This method first checks to see if the address is
+    /** Adds a connection.  The <code>addr</code> parameter holds the address
+     * to which the connection manager should maintain a connection.
+     * This method first checks to see if the address is
      * already registered with the connection manager and returns immediately
      * if it is.  Otherwise, it adds the address to an internal connection map,
      * attempts to establish a connection to the address, and then returns.
-     * From here on out, the internal manager thread will maintian the
-     * connection by continually re-establishing the connection if it ever gets
-     * broken.
+     * Once a connection has been added, the internal manager thread will
+     * maintian the connection by continually re-establishing the connection if
+     * it ever gets broken.
      *
      * @param addr The address to maintain a connection to
      * @param timeout_ms When connection dies, wait this many milliseconds
@@ -195,8 +192,20 @@ namespace Hypertable {
     void add(const CommAddress &addr, uint32_t timeout_ms,
              const char *service_name);
 
-    /**
-     * Same as above method except installs a dispatch handler on the connection
+    /** Adds a connection with a dispatch handler.  The <code>addr</code>
+     * parameter holds the address to which connection manager should maintain a
+     * connection.  This method first checks to see if the address is
+     * already registered with the connection manager and returns immediately
+     * if it is.  Otherwise, it adds the address to an internal connection map,
+     * attempts to establish a connection to the address, and then returns.
+     * Once a connection has been added, the internal manager thread will
+     * maintian the connection by continually re-establishing the connection if
+     * it ever gets broken.
+     *
+     * This version of add accepts a DispatchHandler argument,
+     * <code>handler</code>, which is registered as the connection handler for
+     * the connection and receives all events that occur on the connection
+     * (except for the initialization handshake messages).
      *
      * @param addr The address to maintain a connection to
      * @param timeout_ms The timeout value (in milliseconds) that gets passed
@@ -210,8 +219,22 @@ namespace Hypertable {
     void add(const CommAddress &addr, uint32_t timeout_ms,
              const char *service_name, DispatchHandlerPtr &handler);
 
-    /**
-     * Same as above method except installs a connection initializer
+    /** Adds a connection with a dispatch handler and connection initializer.
+     * The <code>addr</code> parameter holds the address to which connection
+     * manager should maintain a connection.  This method first checks to see
+     * if the address is already registered with the connection manager and
+     * returns immediately if it is.  Otherwise, it adds the address to an
+     * internal connection map, attempts to establish a connection to the
+     * address, and then returns.  Once a connection has been added, the
+     * internal manager thread will maintian the connection by continually
+     * re-establishing the connection if it ever gets broken.
+     *
+     * This version of add accepts a connection initializer,
+     * <code>initializer</code>, which is used to carry out an initialization
+     * handshake.  Once the connection has been established, the connection
+     * initializer is used to generate an initialization handshake message
+     * which is sent to the other end of the connection.  
+     * and process the response t
      *
      * @param addr Address to maintain a connection to
      * @param timeout_ms Timeout value (in milliseconds) that gets passed into
@@ -227,10 +250,9 @@ namespace Hypertable {
                               DispatchHandlerPtr &handler,
                               ConnectionInitializerPtr &initializer);
 
-    /**
-     * Adds a connection to the connection manager with a specific local
-     * address.  The address structure addr holds an address that the
-     * connection manager should maintain a connection to.  This method first
+    /** Adds a connection bound to a local address.
+     * The <code>addr</code> holds the address to which the
+     * connection manager should maintain a connection.  This method first
      * checks to see if the address is already registered with the connection
      * manager and returns immediately if it is.  Otherwise, it adds the
      * address to an internal connection map, attempts to establish a
@@ -248,8 +270,15 @@ namespace Hypertable {
     void add(const CommAddress &addr, const CommAddress &local_addr,
              uint32_t timeout_ms, const char *service_name);
 
-    /**
-     * Same as above method except installs a dispatch handler on the connection
+    /** Adds a connection with a dispatch handler bound to a local address.
+     * The <code>addr</code> holds the address to which the
+     * connection manager should maintain a connection.  This method first
+     * checks to see if the address is already registered with the connection
+     * manager and returns immediately if it is.  Otherwise, it adds the
+     * address to an internal connection map, attempts to establish a
+     * connection to the address, and then returns.  From here on out, the
+     * internal manager thread will maintian the connection by continually
+     * re-establishing the connection if it ever gets broken.
      *
      * @param addr The address to maintain a connection to
      * @param local_addr The local address to bind to
@@ -265,16 +294,14 @@ namespace Hypertable {
              uint32_t timeout_ms, const char *service_name,
              DispatchHandlerPtr &handler);
 
-    /**
-     * Removes a connection from the connection manager
+    /** Removes a connection from the connection manager.
      *
      * @param addr remote address of connection to remove
      * @return Error code (Error::OK on success)
      */
     int remove(const CommAddress &addr);
 
-    /**
-     * This method blocks until the connection to the given address is
+    /** Blocks until the connection to the given address is
      * established.  The given address must have been previously added with a
      * call to Add.  If the connection is not established within
      * max_wait_ms, then the method returns false.
@@ -286,8 +313,7 @@ namespace Hypertable {
      */
     bool wait_for_connection(const CommAddress &addr, uint32_t max_wait_ms);
 
-    /**
-     * This method blocks until the connection to the given address is
+    /** Blocks until the connection to the given address is
      * established.  The given address must have been previously added with a
      * call to Add.  If the connection is not established before the timer
      * expires, then the method returns false.
@@ -298,47 +324,89 @@ namespace Hypertable {
      */
     bool wait_for_connection(const CommAddress &addr, Timer &timer);
 
-    /**
-     * Returns the Comm object associated with this connection manager
+    /** Returns the Comm object associated with this connection manager
      *
      * @return the assocated comm object
      */
     Comm *get_comm() { return m_impl->comm; }
 
-    /**
-     * This method sets a 'quiet_mode' flag which can disable the generation
-     * of log messages upon failed connection attempts.  It is set to false
-     * by default.
+    /** Sets the SharedImpl#quiet_mode flag which will disable the
+     * generation of log messages upon failed connection attempts.  It is set
+     * to <i>false</i> by default.
      *
-     * @param mode The new value for the quiet_mode flag
+     * @param mode The new value for the SharedImpl#quiet_mode flag
      */
     void set_quiet_mode(bool mode) { m_impl->quiet_mode = mode; }
 
-    /**
-     * This is the comm layer dispatch callback method.  It should only get
-     * called by the AsyncComm subsystem.
+    /** Primary dispatch handler method.  The ConnectionManager is a dispatch
+     * handler and is registered as the handler for all of the connections that
+     * it manages.  This method does the job of maintianing connections.
+     * This method will forward all events (except initialization handshake
+     * messages) to any dispatch handler registered for the connection on
+     * which the event was generated.
+     * @param event Comm layer event
      */
     virtual void handle(EventPtr &event);
 
-    /**
-     * This is the Boost thread "run" method.  It is called by the manager
+    /** Boost thread <i>run</i> method.  It is called by the manager
      * thread when it starts up.
      */
     void operator()();
 
   private:
 
+    /** Called by the #add methods to add a connection.  This method creates
+     * and initializes a ConnectionState object for the connnection, adds
+     * it to either SharedImpl#conn_map or SharedImpl#conn_map_proxy depending
+     * on the type of address, and then issues a connect request.
+     *
+     * @param addr The address to maintain a connection to
+     * @param local_addr The local address to bind to
+     * @param timeout_ms The timeout value (in milliseconds) that gets passed
+     *        into Comm::connect and also used as the waiting period betweeen
+     *        connection attempts
+     * @param service_name The name of the serivce at the other end of the
+     *        connection used for descriptive log messages
+     * @param handler This is the default handler to install on the connection.
+     *        All events get changed through to this handler.
+     * @param initializer Connection initialization handshake driver
+     */
     void add_internal(const CommAddress &addr, const CommAddress &local_addr,
                       uint32_t timeout_ms, const char *service_name,
                       DispatchHandlerPtr &handler,
                       ConnectionInitializerPtr &initializer);
 
+    /** This method blocks until the connection represented by
+     * <code>conn_state</code> is established.  If the connection is not
+     * established before <code>timer</code> expires, then the method
+     * returns <i>false</i>.
+     * @param conn_state Pointer to connection state object representing
+     * connection
+     * @param timer Maximum wait timer
+     * @return <i>true</i> if connected, <i>false</i> if <code>timer</code>
+     * expired before connection was established.
+     */
     bool wait_for_connection(ConnectionState *conn_state, Timer &timer);
 
+    /** Calls Comm::connect to establish a connection.  If the connection
+     * attempt results in an error, an error message is logged indicating
+     * that the connection attempt to the given service failed, and another
+     * connection attempt is scheduled for ConnectionState#timeout_ms in the
+     * future.
+     * @param conn_state Pointer to connection state object representing
+     * connection
+     */
     void send_connect_request(ConnectionState *conn_state);
 
+    /** Sets <code>conn_state</code> to <i>disconnected</i> and schedules
+     * another connection attempt in the future.
+     * @param conn_state Pointer to connection state object representing
+     * connection
+     * @param event Event object that triggered the disconnect
+     */
     void set_retry_state(ConnectionState *conn_state, EventPtr &event);
 
+    /// Smart pointer to connection manager state
     SharedImplPtr m_impl;
 
   };
