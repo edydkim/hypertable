@@ -34,7 +34,6 @@
 
 namespace Hypertable {
 
-
   /** @addtogroup AsyncComm
    *  @{
    */
@@ -43,7 +42,12 @@ namespace Hypertable {
    */
   class ConnectionHandlerFactory : public ReferenceCount {
   public:
+    /** Destructor */
     virtual ~ConnectionHandlerFactory() { }
+    
+    /** Creates a connection dispatch handler.
+     * @param dhp Reference to created dispatch handler
+     */
     virtual void get_instance(DispatchHandlerPtr &dhp) = 0;
   };
 

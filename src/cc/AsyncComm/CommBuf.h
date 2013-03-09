@@ -308,13 +308,19 @@ namespace Hypertable {
     friend class IOHandlerData;
     friend class IOHandlerDatagram;
 
-    StaticBuffer data;
-    StaticBuffer ext;
-    CommHeader header;
+    StaticBuffer data; //!< Primary data buffer
+    StaticBuffer ext;  //!< Extended buffer
+    CommHeader header; //!< Comm header
 
   protected:
+
+    /// Write pointer into #data buffer
     uint8_t *data_ptr;
+
+    /// Write pointer into #ext buffer
     const uint8_t *ext_ptr;
+
+    /// Smart pointer to extended buffer memory
     boost::shared_array<uint8_t> ext_shared_array;
   };
 

@@ -69,25 +69,42 @@ namespace Hypertable {
 
   public:
 
+    /** Per-connection state.
+     */
     class ConnectionState : public ReferenceCount {
     public:
+      /// Set to <i>true</i> if connected
       bool                connected;
+      /// Set when connection is removed, prevents connect retry attempts
       bool                decomissioned;
+      /// Connection address supplied to #add method
       CommAddress         addr;
+      /// Local address to bind to
       CommAddress         local_addr;
+      /// Address initialized from Event object
       InetAddr            inet_addr;
+      /// Retry connection attempt after this many milliseconds
       uint32_t            timeout_ms;
+      /// Registered connection handler
       DispatchHandlerPtr  handler;
+      /// Connection initializer
       ConnectionInitializerPtr initializer;
+      /// Set to <i>true</i> if initialization handshake is complete
       bool                initialized;
+      /// Mutex to serialize concurrent access
       Mutex               mutex;
+      /// Condition variable used to signal connection state change
       boost::condition    cond;
+      /// Absolute time of next connect attempt
       boost::xtime        next_retry;
+      /// Service name of connection for log messages
       std::string         service_name;
     };
+    /// Smart pointer to ConnectionState
     typedef intrusive_ptr<ConnectionState> ConnectionStatePtr;
 
-
+    /** StringWeakOrdering for connection retry heap
+     */
     struct LtConnectionState {
       bool operator()(const ConnectionStatePtr &cs1,
                       const ConnectionStatePtr &cs2) const {
@@ -95,35 +112,42 @@ namespace Hypertable {
       }
     };
 
+    /** Connection manager state for sharing between Connection manager objects.
+     */
     class SharedImpl : public ReferenceCount {
     public:
 
+      /** Destructor.
+       */
       ~SharedImpl() {
-        {
-          ScopedLock lock(mutex);
-          if (joined)
-            return;
-          joined = true;
-        }
         shutdown = true;
         retry_cond.notify_one();
         thread->join();
       }
 
-      Comm              *comm;
-      Mutex              mutex;
-      boost::condition   retry_cond;
-      boost::thread     *thread;
-      SockAddrMap<ConnectionStatePtr>  conn_map;
+      /// Pointer to Comm layer
+      Comm *comm;
+      /// Mutex to serialize concurrent access
+      Mutex mutex;
+      /// Condition variable to signal if anything is on the retry heap
+      boost::condition retry_cond;
+      /// Pointer to connection manager thread object
+      boost::thread *thread;
+      /// InetAddr-to-ConnectionState map
+      SockAddrMap<ConnectionStatePtr> conn_map;
+      /// Proxy-to-ConnectionState map
       hash_map<String, ConnectionStatePtr> conn_map_proxy;
+      /// Connect retry heap
       std::priority_queue<ConnectionStatePtr, std::vector<ConnectionStatePtr>,
           LtConnectionState> retry_queue;
+      /// Set to <i>true</i> to prevent connect failure log message
       bool quiet_mode;
+      /// Set to <i>true</i> to signal shutdown in progress
       bool shutdown;
-      bool joined;
     };
-    typedef boost::intrusive_ptr<SharedImpl> SharedImplPtr;
 
+    /// Smart pointer to SharedImpl object
+    typedef boost::intrusive_ptr<SharedImpl> SharedImplPtr;
 
     /**
      * Constructor.  Creates a thread to do connection retry attempts.
@@ -135,7 +159,6 @@ namespace Hypertable {
       m_impl->comm = comm ? comm : Comm::instance();
       m_impl->quiet_mode = false;
       m_impl->shutdown = false;
-      m_impl->joined = false;
       m_impl->thread = new boost::thread(*this);
     }
 
@@ -153,8 +176,8 @@ namespace Hypertable {
     virtual ~ConnectionManager() { }
 
     /**
-     * Adds a connection to the connection manager.  The address structure addr
-     * holds an address that the connection manager should maintain a
+     * Adds a connection to the connection manager.  The <code>addr</code>
+     * parameter holds an address that the connection manager should maintain a
      * connection to.  This method first checks to see if the address is
      * already registered with the connection manager and returns immediately
      * if it is.  Otherwise, it adds the address to an internal connection map,
