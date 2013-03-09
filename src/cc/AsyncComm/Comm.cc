@@ -20,7 +20,7 @@
  */
 
 /** @file
- * Primary entry point for AsyncComm service.
+ * Entry point for AsyncComm service.
  * This file contains method definitions for singleton class Comm
  */
 

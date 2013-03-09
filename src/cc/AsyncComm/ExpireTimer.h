@@ -20,9 +20,9 @@
  */
 
 /** @file
- * Declarations for ExpireTimer
- * This file contains type declarations for ExpireTimer, a structue
- * for holding timer state.
+ * Declarations for ExpireTimer.
+ * This file contains type declarations for ExpireTimer, a structure for
+ * holding timer state.
  */
 
 #ifndef HYPERTABLE_EXPIRE_TIMER_H

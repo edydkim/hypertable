@@ -20,7 +20,7 @@
  */
 
 /** @file
- * Primary entry point for AsyncComm service.
+ * Entry point for AsyncComm service.
  * This file contains the definition for singleton class Comm
  */
 
@@ -41,7 +41,7 @@
 namespace Hypertable {
 
   /** @defgroup AsyncComm AsyncComm
-   * Asynchronous network communication service.
+   * Network communication library.
    * The AsyncComm module is designed for maximally efficient network
    * programming by 1) providing an asynchronous API to facilitate
    * multiprogramming, and 2) using the most efficient polling mechanism for

@@ -77,7 +77,7 @@ namespace Hypertable {
   class UpdateThread;
 
   /** @defgroup RangeServer RangeServer
-   * Range server.
+   * %Range server.
    * The @ref RangeServer module contains the definition of the RangeServer
    * @{
    */
