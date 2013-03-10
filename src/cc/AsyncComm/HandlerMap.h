@@ -58,10 +58,12 @@ namespace Hypertable {
 
   /** Data structure for mapping socket addresses to I/O handlers.
    * An I/O handler is associated with each socket connection and is used
-   * to respond to polling events on the socket descriptor. This class
-   * maintains three maps, one for TCP socket connections, UDP socket
-   * connections, and one for accept sockets.  The Comm methods use
-   * this map to locate the I/O handler for a given address.
+   * to handle polling events on the socket descriptor.  Examples incude
+   * writing a message to the socket, reading a message from the socket,
+   * or completing a connection request.  This class maintains three maps,
+   * one for TCP socket connections, UDP socket connections, and one for
+   * accept sockets.  The Comm methods use this map to locate the I/O
+   * handler for a given address.
    */
   class HandlerMap : public ReferenceCount {
 
@@ -147,30 +149,108 @@ namespace Hypertable {
      */
     int contains_data_handler(const CommAddress &addr);
 
+    /** Decrements the reference count of <code>handler</code>.
+     * The decrementing of a handler's reference count is done by this method
+     * with #m_mutex locked which avoids a race condition between checking
+     * out handlers and purging them.
+     * @param handler Pointer to I/O handler for which to decrement reference
+     * count
+     */
     void decrement_reference_count(IOHandler *handler);
 
+    /** Sets an alias address for an existing TCP address in map.
+     * RangeServers listen on a well-known port defined by the
+     * <code>Hypertable.RangeServer.Port</code> configuration property
+     * (default = 38060).  However, RangeServers connect to the master using
+     * an ephemeral port due to a bind conflict with its listen socket.  So that
+     * the Master can refer to the RangeServer using the well-known port, an
+     * alias address can be registered and subsequently used to reference the
+     * connection.  This method adds an entry to the data (TCP) map for
+     * <code>alias</code> which references the IOHandlerData object previously
+     * registered under <code>addr</code>.
+     * @param addr Address of previously registered data handler
+     * @param alias Alias address to add
+     * @return Error::OK on success, or Error::COMM_CONFLICTING_ADDRESS if
+     * <code>alias</code> is already in the data map, or
+     * Error::COMM_NOT_CONNECTED if <code>addr</code> is not found in the data
+     * map.
+     */
     int set_alias(const InetAddr &addr, const InetAddr &alias);
 
+    /** Removes <code>handler</code> from map.  This method removes
+     * <code>handler</code> from the data, datagram, or accept map, depending
+     * on the type of handler.  If <code>handler</code> refers to a data
+     * handler, then its alias address entry is also removed from the data map.
+     * @param handler IOHandler to remove
+     * @return Error::OK on success, or Error::COMM_NOT_CONNECTED if
+     * <code>handler</code> is not found in any of the maps.
+     */
     int remove_handler(IOHandler *handler);
 
+    /** Decomissions <code>handler</code>.  Since handler pointers are passed
+     * into the polling mechanism and asynchronously referenced by reactor
+     * threads, care must be taken to not delete a handler until it has
+     * be removed from the polling mechanism.  This is accomplished by
+     * introducing a two-step removal process.  First a handler is decomissioned
+     * (by this method) by removing it from the associated map, adding it to the
+     * #m_decomissioned_handlers set and marking it decomissioned.  Once there
+     * are no more references to the handler, it may be safely removed.  The
+     * removal is accomplished via #purge_handler which is called by the reactor
+     * thread after it has been removed from the polling interface.
+     * @param handler Pointer to IOHandler to decomission
+     */
     void decomission_handler(IOHandler *handler);
 
+    /** Decomissions all handlers.  This method is called by the ~Comm to
+     * decomission all of the handlers in the map.
+     * @note It doesn't look like the Comm object ever gets deleted and
+     * therefore this method never gets called.  See issue 1031.
+     */
     void decomission_all();
 
+    /** Determines if <code>handler</code> can be destoryed.  
+     * @return <i>true</i> if <code>handler</code> is decomissioned and
+     * has a reference count of 0.
+     */
     bool destroy_ok(IOHandler *handler);
 
+    /** Translates <code>proxy_addr</code> to its corresponding IPV4 address.
+     * This method fetches the mapping for <code>proxy_addr</code> from
+     * #m_proxy_map and returns the associated IPV4 address in
+     * <code>addr</code>.
+     * @param proxy_addr Reference to proxy address
+     * @param addr Reference to return IPV4 address
+     * @return <i>true</i> if mapping found and address translated, <i>false</i>
+     * if not.
+     */
     bool translate_proxy_address(const CommAddress &proxy_addr, CommAddress &addr);
 
+    /** Purges (removes) <code>handler</code>.  This method removes
+     * <code>handler</code> from the #m_decomissioned_handlers set, signals
+     * #m_cond if #m_decomissioned_handlers becomes empty, calls
+     * <code>hander->disconnect()</code>, and then deletes the handler.
+     * This method must only be called from a reactor thread after the handler
+     * has been removed from the polling interface and #destroy_ok returns
+     * true for the handler.
+     * @param handler Handler to purge
+     */
     void purge_handler(IOHandler *handler);
 
+    /** Waits for map to become empty.  This method assumes that all of the
+     * handlers in the map have been decomissioned.  It waits for the
+     * #m_decomissioned_handlers set to become empty, waiting on #m_cond
+     * until it does.
+     */
     void wait_for_empty();
 
+    /** Adds or updates proxy information.  This method adds or updates proxy
+     * information in #m_proxy_map.  This may invalidate an existing proxy and/or
+     * add a new proxy.  The handler for the invalidated proxy
+     */
     int add_proxy(const String &proxy, const String &hostname, const InetAddr &addr);
 
-    /**
-     * Returns the proxy map
-     *
-     * @param proxy_map reference to proxy map to be filled in
+    /** Returns the proxy map
+     * @param proxy_map reference to returned proxy map
      */
     void get_proxy_map(ProxyMapT &proxy_map);
 

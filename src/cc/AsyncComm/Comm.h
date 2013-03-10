@@ -50,8 +50,7 @@ namespace Hypertable {
    * @{
    */
 
-  /**
-   * Primary entry point to AsyncComm service.
+  /** Entry point to AsyncComm service.
    * There should be only one instance of this class per process and the static
    * method ReactorFactory#initialize must be called prior to constructing this
    * class in order to create the system-wide I/O reactor threads.
