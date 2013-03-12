@@ -19,6 +19,12 @@
  * 02110-1301, USA.
  */
 
+/** @file
+ * Definitions for IOHandlerDatagram.
+ * This file contains method definitions for IOHandlerDatagram, a class for
+ * processing I/O events for datagram sockets.
+ */
+
 #include "Common/Compat.h"
 
 #include <cassert>
@@ -47,7 +53,7 @@ using namespace Hypertable;
 using namespace std;
 
 bool 
-IOHandlerDatagram::handle_event(struct pollfd *event, time_t) {
+IOHandlerDatagram::handle_event(struct pollfd *event, time_t arrival_time) {
   int error;
 
   //DisplayEvent(event);
@@ -75,6 +81,7 @@ IOHandlerDatagram::handle_event(struct pollfd *event, time_t) {
       payload_len = nread - (ssize_t)event->header.header_len;
       event->payload_len = payload_len;
       event->payload = new uint8_t [payload_len];
+      event->arrival_time = arrival_time;
       memcpy((void *)event->payload, m_message + event->header.header_len,
              payload_len);
       deliver_event( event );
@@ -104,10 +111,10 @@ IOHandlerDatagram::handle_event(struct pollfd *event, time_t) {
   return false;
 }
 
-
 #if defined(__linux__)
 
-bool IOHandlerDatagram::handle_event(struct epoll_event *event, time_t) {
+bool IOHandlerDatagram::handle_event(struct epoll_event *event,
+                                     time_t arrival_time) {
   int error;
 
   //DisplayEvent(event);
@@ -142,6 +149,7 @@ bool IOHandlerDatagram::handle_event(struct epoll_event *event, time_t) {
       payload_len = nread - (ssize_t)event->header.header_len;
       event->payload_len = payload_len;
       event->payload = new uint8_t [payload_len];
+      event->arrival_time = arrival_time;
       memcpy((void *)event->payload, m_message + event->header.header_len,
              payload_len);
       deliver_event( event );
@@ -171,7 +179,8 @@ bool IOHandlerDatagram::handle_event(struct epoll_event *event, time_t) {
 }
 
 #elif defined(__sun__)
-bool IOHandlerDatagram::handle_event(port_event_t *event, time_t) {
+bool
+IOHandlerDatagram::handle_event(port_event_t *event, time_t arrival_time) {
   int error;
 
   //DisplayEvent(event);
@@ -201,6 +210,7 @@ bool IOHandlerDatagram::handle_event(port_event_t *event, time_t) {
 	payload_len = nread - (ssize_t)event->header.header_len;
 	event->payload_len = payload_len;
 	event->payload = new uint8_t [payload_len];
+        event->arrival_time = arrival_time;
 	memcpy((void *)event->payload, m_message + event->header.header_len,
 	       payload_len);
 	deliver_event( event );
@@ -243,12 +253,11 @@ bool IOHandlerDatagram::handle_event(port_event_t *event, time_t) {
   return false;
   
 }
+
 #elif defined(__APPLE__) || defined(__FreeBSD__)
 
-/**
- *
- */
-bool IOHandlerDatagram::handle_event(struct kevent *event, time_t) {
+bool
+IOHandlerDatagram::handle_event(struct kevent *event, time_t arrival_time) {
   int error;
 
   //DisplayEvent(event);
@@ -288,6 +297,7 @@ bool IOHandlerDatagram::handle_event(struct kevent *event, time_t) {
     payload_len = nread - (ssize_t)event->header.header_len;
     event->payload_len = payload_len;
     event->payload = new uint8_t [payload_len];
+    event->arrival_time = arrival_time;
     memcpy((void *)event->payload, m_message + event->header.header_len,
            payload_len);
 
