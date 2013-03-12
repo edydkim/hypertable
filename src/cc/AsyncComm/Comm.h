@@ -36,7 +36,7 @@
 #include "DispatchHandler.h"
 #include "HandlerMap.h"
 
-/** Hypertable definitions
+/** %Hypertable definitions
  */
 namespace Hypertable {
 

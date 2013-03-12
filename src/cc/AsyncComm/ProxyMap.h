@@ -56,8 +56,7 @@ namespace Hypertable {
   /// Forward mapping hash type from proxy name to ProxyAddressInfo
   typedef hash_map<String, ProxyAddressInfo> ProxyMapT;
 
-  /**
-   * Maps a set of proxy names to their associated IP addresses.
+  /** Maps a set of proxy names to their associated IP addresses.
    * Hypertable uses <i>proxy names</i> (e.g. "rs1") to refer to servers so
    * that the system can continue to operate properly even when servers are
    * reassigned IP addresses, such as starting and stopping Hypertable running

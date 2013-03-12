@@ -73,8 +73,22 @@ namespace Hypertable {
       m_message_remaining = 0;
     }
 
-    int send_message(CommBufPtr &, uint32_t timeout_ms = 0,
-                     DispatchHandler * = 0);
+    /** Sends message pointed to by <code>cbp</code> over socket associated
+     * with this I/O handler.  If the message being sent is a request
+     * message (has the CommHeader::FLAGS_BIT_REQUEST set) and
+     * <code>disp_handler</code> is not 0, then an entry is added to the
+     * reactor's request cache so that <code>disp_handler</code> will be
+     * called to handle the response or receive a TIMEOUT event if the
+     * response is not received within <code>timeout_ms</code> milliseconds.
+     * @param cbp Reference to CommBufPtr pointing to message to send
+     * @param timeout_ms Millisecond timeout used for request messages
+     * @param disp_handler Dispatch handler used for request messages
+     * @return Error::OK on success, Error::COMM_NOT_CONNECTED if handler has
+     * been decomissioned, or Error::COMM_BROKEN_CONNECTION if a write error
+     * was encountered.
+     */
+    int send_message(CommBufPtr &cbp, uint32_t timeout_ms = 0,
+                     DispatchHandler *disp_handler = 0);
 
     int flush_send_queue();
 

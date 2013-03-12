@@ -19,6 +19,11 @@
  * 02110-1301, USA.
  */
 
+/** @file
+ * Declarations for IOHandler.
+ * This file contains type declarations for IOHandler, an abstract base class
+ * from which I/O handlers are derived.
+ */
 
 #ifndef HYPERTABLE_IOHANDLER_H
 #define HYPERTABLE_IOHANDLER_H
@@ -156,13 +161,37 @@ namespace Hypertable {
       }
     }
 
-    /**
-     *
+    /** Start polling on the handler with the poll interest specified in
+     * <code>mode</code>.
+     * This method registers the poll interest, specified in <code>mode</code>,
+     * with the polling interface and sets #m_poll_interest to
+     * <code>mode</code>.  If an error is encountered, #m_error is
+     * set to the approprate error code and the handler is decomissioned.
+     * @return Error::OK on success, or Error::COMM_BROKEN_CONNECTION or
+     * Error::COMM_POLL_ERROR on error.
      */
     int start_polling(int mode=Reactor::READ_READY);
 
+    /** Adds the poll interest specified in <code>mode</code> to the polling
+     * interface for this handler.
+     * This method adds the poll interest, specified in <code>mode</code>,
+     * to the polling interface for this handler and merges <code>mode</code>
+     * into #m_poll_interest using boolean OR (|).  If an error is encountered,
+     * #m_error is set to the approprate error code and the handler is
+     * decomissioned.
+     * @return Error::OK on success, or Error::COMM_POLL_ERROR on error.
+     */
     int add_poll_interest(int mode);
 
+    /** Removes the poll interest specified in <code>mode</code> to the polling
+     * interface for this handler.
+     * This method removes the poll interest, specified in <code>mode</code>,
+     * from the polling interface for this handler and strips <code>mode</code>
+     * from #m_poll_interest using boolean operations.  If an error is
+     * encountered, #m_error is set to the approprate error code and the handler
+     * is decomissioned.
+     * @return Error::OK on success, or Error::COMM_POLL_ERROR on error.
+     */
     int remove_poll_interest(int mode);
 
     int reset_poll_interest() {
@@ -181,11 +210,6 @@ namespace Hypertable {
     String get_proxy() {
       ScopedLock lock(m_mutex);
       return m_proxy;
-    }
-
-    void set_dispatch_handler(DispatchHandler *dh) {
-      ScopedLock lock(m_mutex);
-      m_dispatch_handler = dh;
     }
 
     int get_sd() { return m_sd; }

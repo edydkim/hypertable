@@ -244,8 +244,18 @@ namespace Hypertable {
     void wait_for_empty();
 
     /** Adds or updates proxy information.  This method adds or updates proxy
-     * information in #m_proxy_map.  This may invalidate an existing proxy and/or
-     * add a new proxy.  The handler for the invalidated proxy
+     * information in #m_proxy_map.  For the data handler to which
+     * <code>addr</code> refers, it updates its proxy name via a call to
+     * IOHandler::set_proxy and then calls #propagate_proxy_map with the newly
+     * added/updated proxy information to update all active data connections
+     * with the new proxy information.
+     * @param proxy Proxy name of new/updated mapping
+     * @param hostname Hostname of new/updated mapping
+     * @param addr InetAddr of new/updated mapping
+     * @return Error::OK on success, or Error::COMM_NOT_CONNECTED or
+     * Error::COMM_BROKEN_CONNECTION if an error was encountered while
+     * propagating the new mapping information over any of the active data
+     * connections.
      */
     int add_proxy(const String &proxy, const String &hostname, const InetAddr &addr);
 
@@ -254,25 +264,92 @@ namespace Hypertable {
      */
     void get_proxy_map(ProxyMapT &proxy_map);
 
+    /** Updates the proxy map with a proxy map update message received from the
+     * proxy master.  If any of the proxy names have changed, the corresponding
+     * data handlers are updated with a call to IOHandler::set_proxy.  After
+     * the proxy map has been successfuly updated, the #m_proxies_loaded flag is
+     * set to <i>true</i> and the #m_cond_proxy condition variable is signalled.
+     * @param message Pointer to proxy map update message
+     * @param message_len Length of proxy map update message
+     */
     void update_proxy_map(const char *message, size_t message_len);
 
+    /** Waits for proxy map to get updated from a proxy map update message
+     * received from the master.  This method waits on #m_cond_proxy for
+     * #m_proxies_loaded to become <i>true</i> or <code>timer</code> expires.
+     * @param timer Deadline timer
+     * @return <i>true</i> if proxy map was loaded, <i>false</i> if
+     * <code>timer</code> expired before proxy map was loaded.
+     */
     bool wait_for_proxy_map(Timer &timer);
 
   private:
 
+    /** Propagates proxy map information in <code>mappings</code> to
+     * all active data (TCP) connections.  This method creates a proxy
+     * map update message from the mappings in <code>mappings</code>.
+     * The update message is just a list of mapping entries in the
+     * following format:
+     * @verbatim <proxy> '\t' <hostname> '\t' <addr> '\n' @endverbatim
+     * Then the proxy map update message is sent via each of the handlers in
+     * the data (TCP) handler map.
+     * @param mappings Proxy map information to propagate.
+     * @return Error::OK on success, or Error::COMM_NOT_CONNECTED or
+     * Error::COMM_BROKEN_CONNECTION if an error was encountered while
+     * sending the proxy map update message over any of the active data
+     * connections.
+     */
     int propagate_proxy_map(ProxyMapT &mappings);
 
-    /**
-     * Translates CommAddress into InetAddr (IP address)
+    /** Translates <code>addr</code> to an InetAddr (IP address).
+     * If <code>addr</code> is of type CommAddress::PROXY, then the
+     * #m_proxy_map is consulted to translate the proxy name to an IP address,
+     * otherwise if <code>addr</code> is of type CommAddress::INET, the IP
+     * address held in <code>addr</code> is copied to <code>inet_addr</code>.
+     * @param addr Address to translate
+     * @param inet_addr Pointer to valid InetAddr object to hold translated
+     * address
+     * @param Error::OK on success, Error::COMM_INVALID_PROXY if
+     * <code>addr</code> is of type CommAddress::PROXY and no mapping is found.
      */
     int translate_address(const CommAddress &addr, InetAddr *inet_addr);
 
+    /** Removes <code>handler</code> from map without locking #m_mutex.  This
+     * method removes <code>handler</code> from the data, datagram, or accept
+     * map, depending on the type of handler.  If <code>handler</code> refers to
+     * a data handler, then its alias address entry is also removed from the
+     * data map.
+     * @param handler IOHandler to remove
+     * @return Error::OK on success, or Error::COMM_NOT_CONNECTED if
+     * <code>handler</code> is not found in any of the maps.
+     */
     int remove_handler_unlocked(IOHandler *handler);
 
+    /** Finds <i>accept</i> I/O handler associated with <code>addr</code>.
+     * This method looks up <code>addr</code> in #m_accept_handler_map and
+     * returns the handler, if found.
+     * @param addr Address of accept handler to locate
+     * @return Pointer to IOHandlerAccept object associated with
+     * <code>addr</code>, or 0 if not found.
+     */
     IOHandlerAccept *lookup_accept_handler(const InetAddr &addr);
 
+    /** Finds <i>data (TCP)</i> I/O handler associated with <code>addr</code>.
+     * This method looks up <code>addr</code> in #m_data_handler_map and
+     * returns the handler, if found.
+     * @param addr Address of data handler to locate
+     * @return Pointer to IOHandlerData object associated with
+     * <code>addr</code>, or 0 if not found.
+     */
     IOHandlerData *lookup_data_handler(const InetAddr &addr);
 
+    /** Finds <i>datagram</i> I/O handler associated with <code>addr</code>.
+     * This method looks up <code>addr</code> in #m_datagram_handler_map and
+     * returns the handler, if found.
+     * @param addr Address of datagram handler to locate
+     * @return Pointer to IOHandlerDatagram object associated with
+     * <code>addr</code>, or 0 if not found.
+     */
     IOHandlerDatagram *lookup_datagram_handler(const InetAddr &addr);
 
     /// %Mutex for serializing concurrent access
@@ -303,7 +380,7 @@ namespace Hypertable {
     bool m_proxies_loaded;
   };
 
-  /// Smart pointer to handler map
+  /// Smart pointer to HandlerMap
   typedef boost::intrusive_ptr<HandlerMap> HandlerMapPtr;
 
   /** @}*/

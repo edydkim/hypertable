@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -17,6 +17,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
+ */
+
+/** @file
+ * Definitions for IOHandler.
+ * This file contains method definitions for IOHandler, an abstract base class
+ * from which I/O handlers are derived.
  */
 
 #include "Common/Compat.h"
@@ -110,6 +116,8 @@ int IOHandler::start_polling(int mode) {
   if (epoll_ctl(m_reactor->poll_fd, EPOLL_CTL_ADD, m_sd, &event) < 0) {
     HT_ERRORF("epoll_ctl(%d, EPOLL_CTL_ADD, %d, %x) failed : %s",
               m_reactor->poll_fd, m_sd, event.events, strerror(errno));
+    ReactorRunner::handler_map->decomission_handler(this);
+    m_error = Error::COMM_POLL_ERROR;
     return Error::COMM_POLL_ERROR;
   }
 #endif
@@ -142,7 +150,9 @@ int IOHandler::add_poll_interest(int mode) {
          m_reactor->poll_fd, m_sd, mode, strerror(errno));
          *((int *)0) = 1;
          **/
-      return Error::COMM_POLL_ERROR;      
+      ReactorRunner::handler_map->decomission_handler(this);
+      m_error = Error::COMM_POLL_ERROR;
+      return Error::COMM_POLL_ERROR;
     }
   }
   return Error::OK;
@@ -169,6 +179,8 @@ int IOHandler::remove_poll_interest(int mode) {
     if (epoll_ctl(m_reactor->poll_fd, EPOLL_CTL_MOD, m_sd, &event) < 0) {
       HT_ERRORF("epoll_ctl(EPOLL_CTL_MOD, sd=%d) (mode=%x) : %s",
                 m_sd, mode, strerror(errno));
+      ReactorRunner::handler_map->decomission_handler(this);
+      m_error = Error::COMM_POLL_ERROR;
       return Error::COMM_POLL_ERROR;
     }
   }
@@ -225,10 +237,13 @@ int IOHandler::add_poll_interest(int mode) {
 
   if (events) {
     if (port_associate(m_reactor->poll_fd, PORT_SOURCE_FD,
-		       m_sd, events, this) < 0)
+		       m_sd, events, this) < 0) {
       HT_ERRORF("port_associate(%d, POLLIN, %d) - %s", m_reactor->poll_fd, m_sd,
 		strerror(errno));
-    return Error::COMM_POLL_ERROR;
+      ReactorRunner::handler_map->decomission_handler(this);
+      m_error = Error::COMM_POLL_ERROR;
+      return Error::COMM_POLL_ERROR;
+    }
   }
   return Error::OK;
 }
@@ -248,6 +263,8 @@ int IOHandler::remove_poll_interest(int mode) {
     if (port_dissociate(m_reactor->poll_fd, PORT_SOURCE_FD, m_sd) < 0) {
       HT_ERRORF("port_dissociate(%d, PORT_SOURCE_FD, %d) - %s",
 		m_reactor->poll_fd, m_sd, strerror(errno));
+      ReactorRunner::handler_map->decomission_handler(this);
+      m_error = Error::COMM_POLL_ERROR;
       return Error::COMM_POLL_ERROR;
     }
   }
@@ -309,6 +326,8 @@ int IOHandler::add_poll_interest(int mode) {
 
   if (kevent(m_reactor->kqd, events, count, 0, 0, 0) == -1) {
     HT_ERRORF("kevent(sd=%d) (mode=%x) : %s", m_sd, mode, strerror(errno));
+    ReactorRunner::handler_map->decomission_handler(this);
+    m_error = Error::COMM_POLL_ERROR;
     return Error::COMM_POLL_ERROR;
   }
   return Error::OK;
@@ -336,6 +355,8 @@ int IOHandler::remove_poll_interest(int mode) {
   if (kevent(m_reactor->kqd, devents, count, 0, 0, 0) == -1
       && errno != ENOENT) {
     HT_ERRORF("kevent(sd=%d) (mode=%x) : %s", m_sd, mode, strerror(errno));
+    ReactorRunner::handler_map->decomission_handler(this);
+    m_error = Error::COMM_POLL_ERROR;
     return Error::COMM_POLL_ERROR;
   }
   return Error::OK;
