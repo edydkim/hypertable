@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2007-2013 Hypertable, Inc.
  *
  * This file is part of Hypertable.
@@ -17,6 +17,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
  * 02110-1301, USA.
+ */
+
+/** @file
+ * Definitions for IOHandlerData.
+ * This file contains method definitions for IOHandlerData, a class for
+ * processing I/O events for data (TCP) sockets.
  */
 
 #include "Common/Compat.h"
@@ -127,10 +133,9 @@ IOHandlerData::handle_event(struct pollfd *event, time_t arrival_time) {
             if (errno != ECONNREFUSED) {
               HT_INFOF("socket read(%d, len=%d) failure : %s", m_sd,
                         (int)m_message_header_remaining, strerror(errno));
-              m_error = Error::OK;
             }
             else
-              m_error = Error::COMM_CONNECT_ERROR;
+              test_and_set_error(Error::COMM_CONNECT_ERROR);
 
             handle_disconnect();
             return true;
@@ -235,10 +240,9 @@ IOHandlerData::handle_event(struct epoll_event *event, time_t arrival_time) {
             if (errno != ECONNREFUSED) {
               HT_INFOF("socket read(%d, len=%d) failure : %s", m_sd,
                        (int)m_message_header_remaining, strerror(errno));
-              m_error = Error::OK;
             }
             else
-              m_error = Error::COMM_CONNECT_ERROR;
+              test_and_set_error(Error::COMM_CONNECT_ERROR);
 
             handle_disconnect();
             return true;
@@ -351,10 +355,9 @@ bool IOHandlerData::handle_event(port_event_t *event, time_t arrival_time) {
             if (errno != ECONNREFUSED) {
               HT_INFOF("socket read(%d, len=%d) failure : %s", m_sd,
                         (int)m_message_header_remaining, strerror(errno));
-              m_error = Error::OK;
             }
             else
-              m_error = Error::COMM_CONNECT_ERROR;
+              test_and_set_error(Error::COMM_CONNECT_ERROR);
 
             handle_disconnect();
             return true;
@@ -431,7 +434,7 @@ bool IOHandlerData::handle_event(port_event_t *event, time_t arrival_time) {
   }
   catch (Hypertable::Exception &e) {
     HT_ERROR_OUT << e << HT_END;
-    m_error = e.code();
+    test_and_set_error(e.code());
     handle_disconnect();
     return true;
   }
@@ -528,7 +531,7 @@ bool IOHandlerData::handle_event(struct kevent *event, time_t arrival_time) {
   }
   catch (Hypertable::Exception &e) {
     HT_ERROR_OUT << e << HT_END;
-    m_error = e.code();
+    test_and_set_error(e.code());
     handle_disconnect();
     return true;
   }

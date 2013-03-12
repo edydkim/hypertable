@@ -275,6 +275,34 @@ namespace Hypertable {
 
   protected:
 
+    /** Sets #m_error to <code>error</code> if it has not already been set.
+     * This method checks to see if #m_error is set to Error::OK and if so, it
+     * sets #m_error to <code>error</code> and returns <i>true</i>.  Otherwise
+     * it does nothing and returns false.
+     * @return <i>true</i> if #m_error was set to <code>error</code>,
+     * <i>false</i> otherwise.
+     */
+    bool test_and_set_error(int32_t error) {
+      ScopedLock lock(m_mutex);
+      if (m_error == Error::OK) {
+        m_error = error;
+        return true;
+      }
+      return false;
+    }
+
+    /** Returns first error code encountered by handler.
+     * When an error is encountered during handler methods, the first error code
+     * that is encountered is recorded in #m_error.  This method returns that
+     * error or Error::OK if no error has been encountered.
+     * @return First error code encountered by this handler, or Error::OK if
+     * no error has been encountered
+     */
+    int32_t get_error() {
+      ScopedLock lock(m_mutex);
+      return m_error;
+    }
+
     /** Get alias address for this connection.
      * @return Alias address for this connection.
      */
@@ -434,7 +462,7 @@ namespace Hypertable {
     /** Decomissioned flag.  Calls to methods that reference this member
      * must be mutex protected by caller.
      */
-    bool                m_decomissioned;
+    bool m_decomissioned;
   };
   /** @}*/
 }
