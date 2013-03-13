@@ -22,7 +22,7 @@
 /** @file
  * Declarations for ConnectionHandlerFactory.
  * This file contains type declarations for ConnectionHandlerFactory, a class
- * for creating default event handlers.
+ * for creating default application dispatch handlers.
  */
 
 #ifndef HYPERTABLE_CONNECTIONHANDLERFACTORY_H
@@ -38,7 +38,7 @@ namespace Hypertable {
    *  @{
    */
 
-  /** Abstract class for creating default event handlers.
+  /** Abstract class for creating default application dispatch handlers.
    */
   class ConnectionHandlerFactory : public ReferenceCount {
   public:

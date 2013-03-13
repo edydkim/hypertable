@@ -42,7 +42,7 @@ namespace Hypertable {
    */
   struct ExpireTimer {
     boost::xtime expire_time;   //!< Absolute expiration time
-    DispatchHandlerPtr handler; //!< Event handler to receive TIMER event
+    DispatchHandlerPtr handler; //!< Dispatch handler to receive TIMER event
   };
 
   /** Comparison function (functor) for timer heap.

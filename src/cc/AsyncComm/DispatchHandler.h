@@ -22,7 +22,8 @@
 /** @file
  * Declarations for DispatchHandler.
  * This file contains type declarations for DispatchHandler, an abstract
- * base class for event handlers.
+ * base class from which are derived handlers for delivering communication
+ * events to an application.
  */
 
 #ifndef HYPERTABLE_DISPATCHHANDLER_H
@@ -38,9 +39,9 @@ namespace Hypertable {
    *  @{
    */
 
-  /** Abstract base class for event handlers registered with AsyncComm.
-   * Event handlers are the mechanism by which an application is notified of
-   * communication events.
+  /** Abstract base class for application dispatch handlers registered with
+   * AsyncComm.  Dispatch handlers are the mechanism by which an application
+   * is notified of communication events.
    */
   class DispatchHandler : public ReferenceCount {
   public:

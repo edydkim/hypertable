@@ -272,9 +272,6 @@ Comm::send_request(const CommAddress &addr, uint32_t timeout_ms,
 int Comm::send_request(IOHandlerData *data_handler, uint32_t timeout_ms,
 		       CommBufPtr &cbuf, DispatchHandler *resp_handler) {
 
-  if (timeout_ms == 0)
-    HT_THROW(Error::REQUEST_TIMEOUT, "Request with timeout of 0");
-
   cbuf->header.flags |= CommHeader::FLAGS_BIT_REQUEST;
   if (resp_handler == 0) {
     cbuf->header.flags |= CommHeader::FLAGS_BIT_IGNORE_RESPONSE;

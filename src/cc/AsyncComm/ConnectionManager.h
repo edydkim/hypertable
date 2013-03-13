@@ -242,7 +242,7 @@ namespace Hypertable {
      * attempts
      * @param service_name Name of the serivce at the other end of the
      * connection used for descriptive log messages
-     * @param handler Default event handler for connection.
+     * @param handler Default dispatch handler for connection.
      * @param initializer Connection initialization handshake driver
      */
     void add_with_initializer(const CommAddress &addr, uint32_t timeout_ms,
